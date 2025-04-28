@@ -1,11 +1,25 @@
-import { sequelize } from '../util/database';
-import { Product } from './product';
-import { User } from './user';
+import { Sequelize } from 'sequelize';
+import { ProductFactory } from './product';
+import { UserFactory } from './user';
 
-// Associations
+const sequelize = new Sequelize('node-complete', 'root', 'P4$$w0rd', {
+  dialect: 'mysql',
+  host: 'localhost'
+});
 
-export {
-  sequelize,
-  Product,
-  User
-}
+// Initialize models
+const Product = ProductFactory(sequelize);
+const User = UserFactory(sequelize);
+
+// Associations 
+User.hasMany(Product, {
+  foreignKey: 'userId',
+  onDelete: 'CASCADE'
+});
+
+Product.belongsTo(User, {
+  foreignKey: 'userId',
+  onDelete: 'CASCADE'
+});
+
+export { sequelize, Product, User };

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Product } from '../models/product';
+import { Product } from '../models';
+import { userInfo } from 'os';
 
 // GET /admin/add-product
 export const getAddProduct = (req: Request, res: Response, next: NextFunction) => {
@@ -13,17 +14,25 @@ export const getAddProduct = (req: Request, res: Response, next: NextFunction) =
 // POST /admin/add-product
 export const postAddProduct = async (req: Request, res: Response, next: NextFunction) => {
   const { title, imageUrl, price, description } = req.body;
-
+  const user = req.user;
+  
+  if (!user) {
+    console.log('missing user');
+    return res.redirect('/'); // You probably want to stop the request here!
+  }
+  
   try {
-    await Product.create({
+    await user.createProduct({
       title,
       imageUrl,
       description,
       price
     });
+    
     res.redirect('/');
   } catch (err) {
     console.error(err);
+    next(err);
   }
 };
 

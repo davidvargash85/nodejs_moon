@@ -1,11 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { Product } from '../models/product';
+import { Product } from '../models';
 // import { Cart } from '../models/cart';
 
 // GET /products
 export const getProducts = (req: Request, res: Response, next: NextFunction) => {
+  const user = req.user;
+  if (!user) {
+    console.log('>> no user found');
+    res.redirect('/');
+  }
   Product.findAll()
-    .then((products) => {
+    .then((products) => { 
       res.render('shop/product-list', {
         prods: products,
         pageTitle: 'All Products',
