@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { Product } from '../models';
-import { userInfo } from 'os';
 
 // GET /admin/add-product
 export const getAddProduct = (req: Request, res: Response, next: NextFunction) => {
@@ -15,20 +14,19 @@ export const getAddProduct = (req: Request, res: Response, next: NextFunction) =
 export const postAddProduct = async (req: Request, res: Response, next: NextFunction) => {
   const { title, imageUrl, price, description } = req.body;
   const user = req.user;
-  
   if (!user) {
     console.log('missing user');
-    return res.redirect('/'); // You probably want to stop the request here!
+    return res.redirect('/');
   }
-  
+
   try {
     await user.createProduct({
       title,
       imageUrl,
       description,
-      price
+      price,
+      userId: user.id
     });
-    
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -79,7 +77,13 @@ export const postEditProduct = async (req: Request, res: Response, next: NextFun
 // GET /admin/products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const products = await Product.findAll();
+    const user = req.user;
+    if (!user) {
+      console.log('missing user');
+      return res.redirect('/');
+    }
+
+    const products = await user.getProducts();
     res.render('admin/products', {
       prods: products,
       pageTitle: 'Admin Products',

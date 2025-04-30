@@ -1,25 +1,16 @@
-import { Sequelize } from 'sequelize';
-import { ProductFactory } from './product';
-import { UserFactory } from './user';
+import { Sequelize } from 'sequelize-typescript';
+import { Product } from './product';
+import { User } from './user';
+import { Cart } from './cart';
+import { CartItem } from './cart-item';
 
-const sequelize = new Sequelize('node-complete', 'root', 'P4$$w0rd', {
+const sequelize = new Sequelize({
+  database: 'david-test',
+  username: 'root',
+  password: 'P4$$w0rd',
+  host: 'localhost',
   dialect: 'mysql',
-  host: 'localhost'
+  models: [Product, User, Cart, CartItem] // ✅ Pass models here — no factories needed
 });
 
-// Initialize models
-const Product = ProductFactory(sequelize);
-const User = UserFactory(sequelize);
-
-// Associations 
-User.hasMany(Product, {
-  foreignKey: 'userId',
-  onDelete: 'CASCADE'
-});
-
-Product.belongsTo(User, {
-  foreignKey: 'userId',
-  onDelete: 'CASCADE'
-});
-
-export { sequelize, Product, User };
+export { sequelize, Product, User, Cart, CartItem };

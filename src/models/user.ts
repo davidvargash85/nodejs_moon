@@ -1,41 +1,54 @@
-import { Model, DataTypes, CreationOptional, Sequelize, Association, HasManyCreateAssociationMixin } from 'sequelize';
-import { Product } from './product';
+import { Table, Column, Model, HasMany, HasOne } from 'sequelize-typescript';
+import { Product } from './product'; // Adjust path
+import {
+  HasManyCreateAssociationMixin,
+  HasManyGetAssociationsMixin,
+  HasManyAddAssociationMixin,
+  HasManyAddAssociationsMixin,
+  HasManySetAssociationsMixin,
+  HasManyCountAssociationsMixin,
+  HasManyHasAssociationMixin,
+  HasManyHasAssociationsMixin,
+  HasManyRemoveAssociationMixin,
+  HasManyRemoveAssociationsMixin,
+  HasOneCreateAssociationMixin,
+} from 'sequelize';
+import { Cart } from './cart';
 
-class User extends Model {
-  public id!: CreationOptional<number>;  // 👈 id is optional during creation
-  public name!: string;
-  public email!: string;
-  public static associations: {
-    products: Association<User, Product>; // ✅ User hasMany products
-  };
-  // 👇 Add this line to tell TypeScript
+export interface UserAttributes {
+  id?: number;
+  name: string;
+  email: string;
+}
+
+@Table
+export class User extends Model<UserAttributes> { // 👈 Very important! Extend generic Model<User>
+  @Column
+  name!: string;
+
+  @Column
+  email!: string;
+
+  @HasMany(() => Product)
+  products!: Product[];
+
+  @HasOne(() => Cart)
+  cart!: Cart;
+
+  // 👇 Add this line to fix createProduct typing
   public createProduct!: HasManyCreateAssociationMixin<Product>;
+  public getProducts!: HasManyGetAssociationsMixin<Product>;
+  public addProduct!: HasManyAddAssociationMixin<Product, number>;
+  public addProducts!: HasManyAddAssociationsMixin<Product, number>;
+  public setProducts!: HasManySetAssociationsMixin<Product, number>;
+  public countProducts!: HasManyCountAssociationsMixin;
+  public hasProduct!: HasManyHasAssociationMixin<Product, number>;
+  public hasProducts!: HasManyHasAssociationsMixin<Product, number>;
+  public removeProduct!: HasManyRemoveAssociationMixin<Product, number>;
+  public removeProducts!: HasManyRemoveAssociationsMixin<Product, number>;
+
+  // cart utils
+  public createCart!: HasOneCreateAssociationMixin<Cart>;
 }
 
-function UserFactory(sequelize: Sequelize) {
-  User.init(
-    {
-      id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
-        allowNull: false,
-        primaryKey: true,
-      },
-      name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      }
-    },
-    {
-      sequelize,
-      tableName: 'users'
-    }
-  );
-  return User;
-}
-
-export { UserFactory, User };
+export type UserCreationAttributes = UserAttributes;

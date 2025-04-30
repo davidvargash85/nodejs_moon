@@ -45,9 +45,10 @@ app.use(get404);
 
 // Start database and server
 sequelize
-  .sync({
-    force: true,
-  })
+  // .sync({
+  //   force: true,
+  // })
+  .sync()
   // fetching user 
   .then(async () => {
     const [user, created] = await User.findOrCreate({
