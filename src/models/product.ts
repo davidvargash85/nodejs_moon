@@ -1,41 +1,19 @@
-import { Table, Column, Model, ForeignKey, BelongsTo, BelongsToMany } from 'sequelize-typescript';
-import { User } from './user';
-import { Cart } from './cart';
-import { CartItem } from './cart-item';
+import { Document, model, Schema } from "mongoose";
 
-export interface ProductAttributes {
-  id?: number;
+export interface IProduct extends Document {
   title: string;
   price: number;
-  imageUrl: string;
   description: string;
-  userId: number;
+  imageUrl: string;
 }
 
-@Table
-export class Product extends Model<ProductAttributes> { // 👈 Important
-  @Column
-  title!: string;
+const productSchema = new Schema<IProduct>({
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+  description: { type: String, required: true },
+  imageUrl: { type: String, required: true },
+}, {
+  timestamps: true,
+})
 
-  @Column
-  price!: number;
-
-  @Column
-  imageUrl!: string;
-
-  @Column
-  description!: string;
-
-  @ForeignKey(() => User)
-  @Column
-  userId!: number;
-
-  @BelongsTo(() => User)
-  user!: User;
-
-  @BelongsToMany(() => Cart, () => CartItem)
-  carts!: Cart[]
-}
-
-export type ProductCreationAttributes = ProductAttributes;
-
+export const Product = model<IProduct>('Product', productSchema);

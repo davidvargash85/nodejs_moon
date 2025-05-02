@@ -1,5 +1,5 @@
-import express from 'express';
-import path from 'path';
+import express, { Request, Response, NextFunction } from 'express';
+import { celebrate } from 'celebrate';
 import { 
   getAddProduct, 
   getProducts, 
@@ -8,6 +8,7 @@ import {
   postEditProduct, 
   postDeleteProduct 
 } from '../controllers/admin';
+import { productValidationSchema } from '../validators/product-validator';
 
 const router = express.Router();
 
@@ -18,7 +19,15 @@ router.get('/add-product', getAddProduct);
 router.get('/products', getProducts);
 
 // /admin/add-product => POST
-router.post('/add-product', postAddProduct);
+router.post(
+  '/add-product',
+  (req: Request, res: Response, next: NextFunction) => {
+    console.log('🛬 Incoming POST body:', req.body);
+    next();
+  },
+  celebrate({ body: productValidationSchema }), // Validates request body
+  postAddProduct
+);
 
 // /admin/edit-product/:productId => GET
 router.get('/edit-product/:productId', getEditProduct);
