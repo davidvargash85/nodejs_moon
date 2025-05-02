@@ -42,9 +42,9 @@ export const getProduct = async (req: Request, res: Response, next: NextFunction
 // GET /
 export const getIndex = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const products = await Product.findAll();  // ✅ added await (you forgot it before)
+    // const products = await Product.findAll();  // ✅ added await (you forgot it before)
     res.render('shop/index', {
-      prods: products,
+      prods: [],
       pageTitle: 'Shop',
       path: '/'
     });
