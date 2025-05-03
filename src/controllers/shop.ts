@@ -1,50 +1,49 @@
 import { Request, Response, NextFunction } from 'express';
 // import { Cart, CartItem, Product, User } from '../models';
 import { CartPageViewModel, ProductInCartViewModel } from '../models/view-models/cart-page-view-model';
+import { Product } from '../models';
 // import { Cart } from '../models/cart';
 
 // GET /products
-export const getProducts = (req: Request, res: Response, next: NextFunction) => {
-  // const user = req.user;
-  // if (!user) {
-  //   console.log('>> no user found');
-  //   res.redirect('/');
-  // }
-  // Product.findAll()
-  //   .then((products) => {
-  //     res.render('shop/product-list', {
-  //       prods: products,
-  //       pageTitle: 'All Products',
-  //       path: '/products'
-  //     });
-  //   })
-  //   .catch((err) => console.log(err));
+export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const products = await Product.find();
+    res.render('shop/product-list', {
+      prods: products,
+      pageTitle: 'All Products',
+      path: '/products'
+    });
+  } catch (error) {
+    console.log('error while fetching products', error);
+    res.redirect('/');
+  }
+
 };
 
 // GET /products/:productId
 export const getProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // const prodId = req.params.productId;
-  // try {
-  //   const product = await Product.findByPk(prodId);
-  //   if (!product) {
-  //     return res.redirect('/');
-  //   }
-  //   res.render('shop/product-detail', {
-  //     product,
-  //     pageTitle: product.title,
-  //     path: '/products'
-  //   });
-  // } catch (error) {
-  //   console.log(error);
-  // }
+  const prodId = req.params.productId;
+  try {
+    const product = await Product.findById(prodId);
+    if (!product) {
+      return res.redirect('/');
+    }
+    res.render('shop/product-detail', {
+      product,
+      pageTitle: product.title,
+      path: '/products'
+    });
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 // GET /
 export const getIndex = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // const products = await Product.findAll();  // ✅ added await (you forgot it before)
+    const products = await Product.find();  // ✅ added await (you forgot it before)
     res.render('shop/index', {
-      prods: [],
+      prods: products,
       pageTitle: 'Shop',
       path: '/'
     });

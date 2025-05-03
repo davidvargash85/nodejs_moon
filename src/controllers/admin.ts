@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Product } from '../models';
+import { Product, User } from '../models';
 
 // GET /admin/add-product
 export const getAddProduct = (req: Request, res: Response, next: NextFunction) => {
@@ -41,65 +41,99 @@ export const getEditProduct = async (req: Request, res: Response, next: NextFunc
 
   const prodId = req.params.productId;
 
-  // try {
-  //   const product = await Product.findByPk(prodId);
-  //   if (!product) {
-  //     return res.redirect('/');
-  //   }
-  //   res.render('admin/edit-product', {
-  //     pageTitle: 'Edit Product',
-  //     path: '/admin/edit-product',
-  //     editing: editMode,
-  //     product: product
-  //   });
-  // } catch (err) {
-  //   console.error(err);
-  // }
+  try {
+    const product = await Product.findById(prodId);
+    if (!product) {
+      return res.redirect('/');
+    }
+    res.render('admin/edit-product', {
+      pageTitle: 'Edit Product',
+      path: '/admin/edit-product',
+      editing: editMode,
+      product: product
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // POST /admin/edit-product
 export const postEditProduct = async (req: Request, res: Response, next: NextFunction) => {
   const { productId, title, price, imageUrl, description } = req.body;
 
-  // try {
-  //   await Product.update(
-  //     { title, price, imageUrl, description },
-  //     { where: { id: productId } }
-  //   );
-  //   res.redirect('/admin/products');
-  // } catch (err) {
-  //   console.error(err);
-  // }
+  try {
+    await Product.findByIdAndUpdate(
+      productId,
+      { title, price, description, imageUrl },
+      { new: true, runValidators: true }
+    );
+    res.redirect('/admin/products');
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // GET /admin/products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
-  // try {
-  //   const user = req.user;
-  //   if (!user) {
-  //     console.log('missing user');
-  //     return res.redirect('/');
-  //   }
-
-  //   const products = await user.getProducts();
-  //   res.render('admin/products', {
-  //     prods: products,
-  //     pageTitle: 'Admin Products',
-  //     path: '/admin/products'
-  //   });
-  // } catch (err) {
-  //   console.error(err);
-  // }
+  const products = await Product.find();
+  try {
+    res.render('admin/products', {
+      prods: products,
+      pageTitle: 'Admin Products',
+      path: '/admin/products'
+    });
+  } catch (err) {
+    console.error(err);
+  }
 };
 
 // POST /admin/delete-product
 export const postDeleteProduct = async (req: Request, res: Response, next: NextFunction) => {
   const { productId } = req.body;
 
-  // try {
-  //   await Product.destroy({ where: { id: productId } });
-  //   res.redirect('/admin/products');
-  // } catch (err) {
-  //   console.error(err);
-  // }
+  console.log('>> POST /admin/delete-product', productId);
+
+  try {
+    const deleted = await Product.findByIdAndDelete(productId);
+
+    if (!deleted) {
+      console.error('❌ Error deleting product:');
+      return res.redirect('/');
+    }
+    return res.redirect('/admin/products'); // ✅ redirect after successful deletion
+  } catch (err) {
+    console.error('❌ Error deleting product:', err);
+    return res.redirect('/');
+  }
 };
+
+export const syncProductUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await User.findOne({
+      email: 'davidvargash@gmail.com'
+    });
+
+    if (!user) {
+      res.status(500).send({
+        error: 'Internal Server Error',
+        message: 'No user found'
+      });
+      return;
+    }
+
+    const result = await Product.updateMany(
+      { user: { $exists: false } },
+      { $set: { user: user._id } }
+    );
+
+    res.status(200).send({
+      message: `Synced ${result.modifiedCount} products`,
+    });
+  } catch (error) {
+    console.log('>> error syncing user on products', error);
+    res.status(500).send({
+      error: 'Internal Server Error',
+      message: 'Could not sync products and users'
+    });
+  }
+}

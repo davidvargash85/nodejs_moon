@@ -1,12 +1,13 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { celebrate } from 'celebrate';
-import { 
-  getAddProduct, 
-  getProducts, 
-  postAddProduct, 
-  getEditProduct, 
-  postEditProduct, 
-  postDeleteProduct 
+import {
+  getAddProduct,
+  getProducts,
+  postAddProduct,
+  getEditProduct,
+  postEditProduct,
+  postDeleteProduct,
+  syncProductUser
 } from '../controllers/admin';
 import { productValidationSchema } from '../validators/product-validator';
 
@@ -33,9 +34,17 @@ router.post(
 router.get('/edit-product/:productId', getEditProduct);
 
 // /admin/edit-product => POST
-router.post('/edit-product', postEditProduct);
+router.post('/edit-product',
+  (req: Request, res: Response, next: NextFunction) => {
+    console.log('🛬 edit-product -- POST body:', req.body);
+    next();
+  },
+  postEditProduct
+);
 
 // /admin/delete-product => POST
 router.post('/delete-product', postDeleteProduct);
+
+router.get('/sync-product-user', syncProductUser);
 
 export default router;
