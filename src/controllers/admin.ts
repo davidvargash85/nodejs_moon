@@ -15,15 +15,15 @@ export const getAddProduct = (req: Request, res: Response, next: NextFunction) =
 export const postAddProduct = async (req: Request, res: Response, next: NextFunction) => {
   console.log('>> postAddProduct')
   const { title, imageUrl, price, description } = req.body;
-  // const user = req.user;
-  // if (!user) {
-  //   console.log('missing user');
-  //   return res.redirect('/');
-  // }
+  const user = req.user;
+  if (!user) {
+    console.log('missing user');
+    return res.redirect('/');
+  }
 
   try {
     const p = await Product.create({
-      title, imageUrl, price, description,
+      title, imageUrl, price, description, user: user._id
     })
     console.log('>> product created', p)
     res.redirect('/');
