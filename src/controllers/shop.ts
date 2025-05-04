@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 // import { Cart, CartItem, Product, User } from '../models';
 import { CartPageViewModel, ProductInCartViewModel } from '../models/view-models/cart-page-view-model';
-import { Product } from '../models';
+import { Product, ProductDoc, ProductModel } from '../models/product';
+import { Cart } from '../models/cart';
+import { Types } from 'mongoose';
 // import { Cart } from '../models/cart';
 
 // GET /products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const products = await Product.find();
+    const products = await ProductModel.find();
     res.render('shop/product-list', {
       prods: products,
       pageTitle: 'All Products',
@@ -24,7 +26,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
 export const getProduct = async (req: Request, res: Response, next: NextFunction) => {
   const prodId = req.params.productId;
   try {
-    const product = await Product.findById(prodId);
+    const product = await ProductModel.findById(prodId);
     if (!product) {
       return res.redirect('/');
     }
@@ -41,7 +43,7 @@ export const getProduct = async (req: Request, res: Response, next: NextFunction
 // GET /
 export const getIndex = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const products = await Product.find();  // ✅ added await (you forgot it before)
+    const products = await ProductModel.find();  // ✅ added await (you forgot it before)
     res.render('shop/index', {
       prods: products,
       pageTitle: 'Shop',
@@ -54,147 +56,141 @@ export const getIndex = async (req: Request, res: Response, next: NextFunction) 
 
 // GET /cart
 export const getCart = async (req: Request, res: Response, next: NextFunction) => {
-  // const user = req.user;
-  // if (!user) {
-  //   console.log('>> user not found');
-  //   return res.redirect('/');
-  // }
+  const user = req.user;
+  if (!user) {
+    console.log('>> user not found');
+    return res.redirect('/');
+  }
 
-  // try {
-  //   const [cart] = await Cart.findOrCreate({
-  //     where: { userId: user.id }
-  //   });
+  try {
+    let cart = await Cart.findOne({ user: user._id });
+    
+    if (!cart) {
+      cart = await Cart.create({
+        user: user._id,
+        products: [],
+      });
+    } else {
+      await cart.populate('products.product');
+    }
+    
+    const products: ProductInCartViewModel[] = cart.products.map(item => {
+      if (typeof item.product === 'object' && item.product !== null && '_id' in item.product) {
+        const product = item.product as unknown as ProductDoc;
+        return {
+          id: product._id,
+          title: product.title,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          userId: product.user,
+          quantity: item.quantity,
+          description: product.description,
+        };
+      }
 
-  //   if (!cart) {
-  //     console.log('>> could not create or find cart');
-  //     return res.redirect('/');
-  //   }
+      // fallback if not populated
+      return {
+        id: item.product as unknown as Types.ObjectId,
+        title: '',
+        price: Types.Decimal128.fromString('0'), // ✅ fix here
+        imageUrl: '',
+        description: '',
+        userId: cart.user,
+        quantity: item.quantity
+      };
+    });
 
-  //   // Fetch CartItems, including their associated Products
-  //   const cartItems = await CartItem.findAll({
-  //     where: { cartId: cart.id },
-  //     include: [Product] // 👈 Eager-load associated Product
-  //   });
+    console.log('>> products in cart:', products);
 
-  //   // Now map CartItems to their Products
-  //   const products: ProductInCartViewModel[] = cartItems.map(item => {
-  //     const productsPlain = item.product.get({ plain: true }) as ProductInCartViewModel;
-  //     return {
-  //       ...productsPlain,
-  //       quantity: item.quantity
-  //     }
-  //   }); // `product` comes from the include
-
-  //   console.log('>> products in cart:', products);
-
-  //   // Render or send response
-  //   return res.render('shop/cart', {
-  //     products: products,
-  //     pageTitle: 'Your Cart',
-  //     path: '/cart'
-  //   } satisfies CartPageViewModel);
-  // } catch (error) {
-  //   console.log('>> error occurred while fetching cart items', error);
-  //   return res.redirect('/');
-  // }
+    // Render or send response
+    return res.render('shop/cart', {
+      products: products,
+      pageTitle: 'Your Cart',
+      path: '/cart'
+    } satisfies CartPageViewModel);
+  } catch (error) {
+    console.log('>> error occurred while fetching cart items', error);
+    return res.redirect('/');
+  }
 };
 
 // POST /cart
 export const postCart = async (req: Request, res: Response, next: NextFunction) => {
-  // const productId = req.body.productId;
-  // if (!productId) {
-  //   console.log('>> product not found');
-  //   return res.redirect('/');
-  // }
+  const productId = req.body.productId;
+  if (!productId) {
+    console.log('>> product not found');
+    return res.redirect('/');
+  }
 
-  // const user = req.user;
-  // if (!user) {
-  //   console.log('>> user not found');
-  //   return res.redirect('/');
-  // }
+  const user = req.user;
+  if (!user) {
+    console.log('>> user not found');
+    return res.redirect('/');
+  }
 
-  // try {
-  //   const [cart] = await Cart.findOrCreate({
-  //     where: { userId: user.id }
-  //   });
+  try {
+    let cart = await Cart.findOne({ user: user._id }).populate('products.product');
 
-  //   if (!cart) {
-  //     console.log('>> could not create or find cart');
-  //     return res.redirect('/');
-  //   }
+    if (!cart) {
+      cart = await Cart.create({
+        user: user._id,
+        products: [{
+          product: productId,
+          quantity: 1
+        }]
+      });
+    } else {
+      const product = cart.products.find((p) => p.product.equals(productId));
+      if (product) {
+        product.quantity += 1;
+      } else {
+        cart.products.push({
+          product: productId,
+          quantity: 1,
+        })
+      }
+      await cart.save();
+    }
 
-  //   console.log('>> product-id', productId);
-
-  //   const [cartItem, createdCartItem] = await CartItem.findOrCreate({
-  //     where: {
-  //       cartId: cart.id,
-  //       productId: productId
-  //     },
-  //     defaults: {
-  //       quantity: 1,
-  //     }
-  //   });
-
-  //   if (!cartItem) {
-  //     console.log('>> could not create cartItem');
-  //     return res.redirect('/');
-  //   }
-
-  //   if (!createdCartItem) {
-  //     // If it already existed, increment the quantity
-  //     await cartItem.increment('quantity', { by: 1 });
-  //     console.log('>> Incremented quantity for existing cart item');
-  //   } else {
-  //     console.log('>> Created new cart item with quantity 1');
-  //   }
-
-  //   return res.redirect('/cart');
-  // } catch (error) {
-  //   console.log('>> error occurred while adding product to cart', error);
-  //   return res.redirect('/');  // 👈 Always respond
-  // }
+    return res.redirect('/cart');
+  } catch (error) {
+    console.log('>> error occurred while adding product to cart', error);
+    return res.redirect('/');
+  }
 };
 
 // POST /cart-delete-item
 export const postCartDeleteProduct = async (req: Request, res: Response, next: NextFunction) => {
-  // const productId = req.body.productId;
-  // if (!productId) {
-  //   console.log('>> product not found');
-  //   return res.redirect('/');
-  // }
+  const productId = req.body.productId;
+  if (!productId) {
+    console.log('>> product not found');
+    return res.redirect('/');
+  }
 
-  // const user = req.user;
-  // if (!user) {
-  //   console.log('>> user not found');
-  //   return res.redirect('/');
-  // }
+  const user = req.user;
+  if (!user) {
+    console.log('>> user not found');
+    return res.redirect('/');
+  }
 
-  // try {
-  //   const cart = await Cart.findOne({
-  //     where: {
-  //       userId: user.id,
-  //     }
-  //   })
+  try {
+    const cart = await Cart.findOne({
+      user: user.id,
+    }).populate('products.product');
 
-  //   if (!cart) {
-  //     console.log('... error finding cart');
-  //     return res.redirect('/');
-  //   }
+    if (!cart) {
+      console.log('... error finding cart');
+      return res.redirect('/');
+    }
 
-  //   // await cart.removeProduct(productId); // this uses your declared mixin
-  //   await CartItem.destroy({
-  //     where: {
-  //       productId,
-  //       cartId: cart.id
-  //     }
-  //   })
-  //   console.log(`>> removed product ${productId} from cart`);
-
-  //   return res.redirect('/cart');
-  // } catch (error) {
-  //   console.log('>> error while deleting cart product')
-  //   return res.redirect('/');
-  // }
+    cart.products = cart.products.filter((p) => !p.product.equals(productId));
+    await cart.save()
+    console.log(`>> removed product ${productId} from cart`);
+    return res.redirect('/cart');
+  } catch (error) {
+    console.log('>> error while deleting cart product')
+    return res.redirect('/');
+  }
 };
 
 // GET /orders

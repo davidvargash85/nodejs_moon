@@ -1,10 +1,12 @@
+import { Types } from "mongoose";
+
 export interface ProductInCartViewModel {
-  id  : number;
+  id: Types.ObjectId;
   title: string;
-  price: number;
+  price: Types.Decimal128;
   imageUrl: string;
   description: string;
-  userId: number;
+  userId: Types.ObjectId;
   quantity: number;
 }
 

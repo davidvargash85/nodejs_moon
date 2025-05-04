@@ -1,29 +1,28 @@
-import { Table, Column, Model, ForeignKey, BelongsTo, BelongsToMany } from 'sequelize-typescript';
-import { User } from './user';
-import { CartItem } from './cart-item';
-import { Product } from './product';
-import { BelongsToManyRemoveAssociationMixin } from 'sequelize';
+import { model, Schema, Types } from 'mongoose';
 
-export interface CartAttributes {
-  id?: number;
-  cartId?: number;
-  userId?: number;
-};
-
-@Table
-export class Cart extends Model<CartAttributes> { // 👈 Important
-  @ForeignKey(() => User)
-  @Column
-  userId!: number;
-
-  @BelongsTo(() => User)
-  user!: User;
-
-  @BelongsToMany(() => Product, () => CartItem)
-  products!: Product[]
-
-  public removeProduct!: BelongsToManyRemoveAssociationMixin<Product, number>;
+export interface CartProduct {
+  product: Types.ObjectId,
+  quantity: number
 }
 
-export type CartCreationAttributes = CartAttributes;
+export interface CartAttributes {
+  user: Types.ObjectId,
+  products: CartProduct[],
+};
+
+export interface CartDoc extends Document, CartAttributes { }
+
+const cartSchema = new Schema<CartDoc>({
+  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  products: [
+    {
+      product: { type: Types.ObjectId, ref: 'Product', required: true },
+      quantity: { type: Schema.Types.Number, default: 1, min: 1 }
+    }
+  ]
+}, {
+  timestamps: true,
+});
+
+export const Cart = model<CartDoc>('Cart', cartSchema);
 

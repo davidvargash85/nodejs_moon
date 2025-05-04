@@ -1,14 +1,30 @@
-import { Decimal128, Document, model, Schema } from "mongoose";
+import { Schema, model, Types, Document, Model } from 'mongoose';
 
-export interface ProductAttrs {
+// Used when creating a product
+export interface Product {
   title: string;
-  price: Decimal128;
+  price: Types.Decimal128;
   description: string;
   imageUrl: string;
-  user: Schema.Types.ObjectId
+  user: Types.ObjectId;
 }
 
-export interface ProductDoc extends Document, ProductAttrs { }
+// A full product document returned by Mongoose
+export interface ProductDoc extends Document {
+  _id: Types.ObjectId;
+  title: string;
+  price: Types.Decimal128;
+  description: string;
+  imageUrl: string;
+  user: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// (Optional) For custom static methods
+interface ProductModel extends Model<ProductDoc> {
+  build(attrs: Product): ProductDoc;
+}
 
 const productSchema = new Schema<ProductDoc>({
   title: { type: String, required: true },
@@ -20,4 +36,10 @@ const productSchema = new Schema<ProductDoc>({
   timestamps: true,
 });
 
-export const Product = model<ProductDoc>('Product', productSchema);
+// Optional static builder for TS safety when creating
+productSchema.statics.build = function(attrs: Product) {
+  return new this(attrs);
+};
+
+// Fixes the TS error by not manually defining _id in ProductDoc
+export const ProductModel = model<ProductDoc, ProductModel>('Product', productSchema);

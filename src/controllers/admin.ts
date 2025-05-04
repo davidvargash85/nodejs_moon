@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { Product, User } from '../models';
+import { ProductModel, User } from '../models';
+import { Product, ProductDoc } from '../models/product';
 
 // GET /admin/add-product
 export const getAddProduct = (req: Request, res: Response, next: NextFunction) => {
@@ -22,7 +23,7 @@ export const postAddProduct = async (req: Request, res: Response, next: NextFunc
   }
 
   try {
-    const p = await Product.create({
+    const p = await ProductModel.create({
       title, imageUrl, price, description, user: user._id
     })
     console.log('>> product created', p)
@@ -42,7 +43,7 @@ export const getEditProduct = async (req: Request, res: Response, next: NextFunc
   const prodId = req.params.productId;
 
   try {
-    const product = await Product.findById(prodId);
+    const product = await ProductModel.findById(prodId);
     if (!product) {
       return res.redirect('/');
     }
@@ -62,7 +63,7 @@ export const postEditProduct = async (req: Request, res: Response, next: NextFun
   const { productId, title, price, imageUrl, description } = req.body;
 
   try {
-    await Product.findByIdAndUpdate(
+    await ProductModel.findByIdAndUpdate(
       productId,
       { title, price, description, imageUrl },
       { new: true, runValidators: true }
@@ -75,10 +76,31 @@ export const postEditProduct = async (req: Request, res: Response, next: NextFun
 
 // GET /admin/products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
-  const products = await Product.find();
+  const user = req.user;
+  if (!user) {
+    console.log('>> GET /admin/products >> no user found');
+    return res.redirect('/');
+  }
+
+  const userWithProducts = await User.aggregate([
+    {
+      $match: { _id: user._id } // only look up the current user
+    },
+    {
+      $lookup: {
+        from: 'products',
+        localField: '_id',
+        foreignField: 'user',
+        as: 'products'
+      }
+    }
+  ]);
+
+  const currentUserWithProducts = userWithProducts[0]; // safe because of $match
+
   try {
     res.render('admin/products', {
-      prods: products,
+      prods: currentUserWithProducts?.products as ProductDoc[],
       pageTitle: 'Admin Products',
       path: '/admin/products'
     });
@@ -94,7 +116,7 @@ export const postDeleteProduct = async (req: Request, res: Response, next: NextF
   console.log('>> POST /admin/delete-product', productId);
 
   try {
-    const deleted = await Product.findByIdAndDelete(productId);
+    const deleted = await ProductModel.findByIdAndDelete(productId);
 
     if (!deleted) {
       console.error('❌ Error deleting product:');
@@ -121,7 +143,7 @@ export const syncProductUser = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    const result = await Product.updateMany(
+    const result = await ProductModel.updateMany(
       { user: { $exists: false } },
       { $set: { user: user._id } }
     );
