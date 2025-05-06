@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-// import { Cart, CartItem, Product, User } from '../models';
 import { CartPageViewModel, ProductInCartViewModel } from '../models/view-models/cart-page-view-model';
-import { Product, ProductDoc, ProductModel } from '../models/product';
+import { ProductDoc, ProductModel } from '../models/product';
+import { OrderModel } from '../models/order';
 import { Cart } from '../models/cart';
 import { Types } from 'mongoose';
-// import { Cart } from '../models/cart';
 
 // GET /products
 export const getProducts = async (req: Request, res: Response, next: NextFunction) => {
@@ -64,7 +63,7 @@ export const getCart = async (req: Request, res: Response, next: NextFunction) =
 
   try {
     let cart = await Cart.findOne({ user: user._id });
-    
+
     if (!cart) {
       cart = await Cart.create({
         user: user._id,
@@ -73,7 +72,7 @@ export const getCart = async (req: Request, res: Response, next: NextFunction) =
     } else {
       await cart.populate('products.product');
     }
-    
+
     const products: ProductInCartViewModel[] = cart.products.map(item => {
       if (typeof item.product === 'object' && item.product !== null && '_id' in item.product) {
         const product = item.product as unknown as ProductDoc;
@@ -194,17 +193,107 @@ export const postCartDeleteProduct = async (req: Request, res: Response, next: N
 };
 
 // GET /orders
-export const getOrders = (req: Request, res: Response, next: NextFunction) => {
-  // res.render('shop/orders', {
-  //   path: '/orders',
-  //   pageTitle: 'Your Orders'
-  // });
+export const getOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      console.log('>> user not found');
+      return res.redirect('/');
+    }
+
+    const orders = await OrderModel.find({
+      user: user._id
+    })
+
+    orders.forEach((order) => {
+      console.log('Order ID:', order._id.toString());
+      console.log('Total:', parseFloat(order.total.toString()));
+
+      order.products.forEach((p, i) => {
+        console.log(`Product #${i + 1}:`);
+        console.log('  ID:', p.productId.toString());
+        console.log('  Title:', p.title);
+        console.log('  Price:', parseFloat(p.price.toString()));
+        console.log('  Quantity:', p.quantity);
+      });
+    });
+
+    const viewOrders = orders.map(order => ({
+      id: order._id.toString(),
+      total: parseFloat(order.total.toString()),
+      products: order.products.map(p => ({
+        productId: p.productId.toString(),
+        title: p.title,
+        price: parseFloat(p.price.toString()), // ✅ convert here
+        quantity: p.quantity,
+      })),
+    }));
+
+    res.render('shop/orders', {
+      orders: viewOrders,
+      path: '/orders',
+      pageTitle: 'Your Orders'
+    });
+  } catch (error) {
+    console.log('>> error occurred while fetching user orders', error);
+    return res.redirect('/');
+  }
 };
 
 // GET /checkout
-export const getCheckout = (req: Request, res: Response, next: NextFunction) => {
-  // res.render('shop/checkout', {
-  //   path: '/checkout',
-  //   pageTitle: 'Checkout'
-  // });
+export const getCheckout = async (req: Request, res: Response, next: NextFunction) => {
+  const user = req.user;
+  if (!user) {
+    console.log('>> user not found');
+    return res.redirect('/');
+  }
+
+  try {
+    const cart = await Cart.findOne({ user: user._id }).populate({
+      path: 'products.product',
+      model: 'Product'
+    });
+    if (!cart) {
+      res.status(400).send({ message: 'There is no cart associated with this user' });
+      return;
+    }
+    console.log(cart.products[0].product);
+
+    const total = cart.products.reduce((t, p) => {
+      const prod = p.product as unknown as ProductDoc;
+      return t += (parseFloat(prod.price.toString()) * p.quantity);
+    }, 0)
+
+    const orderProducts = cart.products.map((p, i) => {
+      const rawProduct = p.product;
+
+      const prod = rawProduct as unknown as ProductDoc;
+
+      if (!prod || typeof prod !== 'object' || !('title' in prod)) {
+        throw new Error(`Product at index ${i} is not properly populated`);
+      }
+
+      return {
+        productId: (prod as ProductDoc)._id,
+        title: (prod as ProductDoc).title,
+        price: (prod as ProductDoc).price,
+        quantity: p.quantity
+      };
+    });
+
+    const order = await OrderModel.create({
+      user: user._id,
+      products: orderProducts,
+      total
+    })
+
+    cart.products = [];
+    cart.save();
+
+    res.redirect('/orders')
+  } catch (error) {
+    console.log('>> error occurred while creating an order', error);
+    return res.redirect('/');
+  }
+  console.log('>> checkout', user._id)
 };

@@ -34,6 +34,6 @@ router.post('/cart-delete-item', postCartDeleteProduct);
 router.get('/orders', getOrders);
 
 // GET /checkout
-router.get('/checkout', getCheckout);
+router.post('/checkout', getCheckout);
 
 export default router;

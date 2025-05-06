@@ -1,9 +1,45 @@
 <%- include('../includes/head.ejs') %>
-    </head>
+</head>
 
-    <body>
-        <%- include('../includes/navigation.ejs') %>
-        <main>
-            <h1>Nothing there!</h1>
-        </main>
-        <%- include('../includes/end.ejs') %>
+<body>
+  <%- include('../includes/navigation.ejs') %>
+
+  <main class="orders-container">
+    <h1>Your Orders</h1>
+
+    <% if (orders.length > 0) { %>
+      <% orders.forEach((order, orderIndex) => { %>
+        <section class="order-card">
+          <h2>Order #<%= orderIndex + 1 %></h2>
+          <p><strong>Order ID:</strong> <%= order.id %></p>
+          <p class="order-total"><strong>Total:</strong> $<%= order.total %></p>
+
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price (each)</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% order.products.forEach(p => { %>
+                <tr>
+                  <td><%= p.title %></td>
+                  <td><%= p.quantity %></td>
+                  <td>$<%= p.price %></td>
+                  <td>$<%= p.subtotal %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </section>
+      <% }) %>
+    <% } else { %>
+      <p>You have no orders yet.</p>
+    <% } %>
+  </main>
+
+  <%- include('../includes/end.ejs') %>
+</body>
